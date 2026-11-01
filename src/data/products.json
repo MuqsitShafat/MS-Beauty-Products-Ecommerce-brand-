@@ -1,0 +1,69 @@
+{
+  "categories": [
+    { "slug": "facials", "title": "Facials", "description": "Complete skin rejuvenating facial kits, scrubs and masks" },
+    { "slug": "face-washes", "title": "Face Washes", "description": "Gentle, purifying & glowing botanical cleansers" },
+    { "slug": "wax", "title": "Wax & Hair Removal", "description": "Organic honey wax and professional waxing essentials" }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Gentle Botanical Foaming Face Wash",
+      "category": "face-washes",
+      "price": 450,
+      "oldPrice": 600,
+      "image": "facewash-1.jpg",
+      "badge": "Popular",
+      "description": "Infused with green tea, aloe vera and chamomile for deep yet gentle daily cleansing."
+    },
+    {
+      "id": 2,
+      "name": "Vitamin C Brightening Face Wash (Buy 1 Get 1)",
+      "category": "face-washes",
+      "price": 650,
+      "oldPrice": 900,
+      "image": "facewash-2.jpg",
+      "badge": "B1G1 FREE",
+      "description": "Rich in Kakadu plum & sweet orange extracts for radiant and glowing skin."
+    },
+    {
+      "id": 3,
+      "name": "Gold Radiance 6-Step Luxury Facial Kit",
+      "category": "facials",
+      "price": 1200,
+      "oldPrice": 1600,
+      "image": "facial-1.jpg",
+      "badge": "Best Seller",
+      "description": "Complete salon-grade 6-step gold facial treatment for immediate party glow."
+    },
+    {
+      "id": 4,
+      "name": "Natural Apricot & Walnut Exfoliating Scrub",
+      "category": "facials",
+      "price": 550,
+      "oldPrice": 750,
+      "image": "facial-2.jpg",
+      "badge": "New",
+      "description": "Gentle natural micro-exfoliants polish away dead cells for baby-soft skin."
+    },
+    {
+      "id": 5,
+      "name": "Organic Honey Natural Soft Wax (300g)",
+      "category": "wax",
+      "price": 600,
+      "oldPrice": 750,
+      "image": "wax-1.jpg",
+      "badge": "Smooth Skin",
+      "description": "Calming formula infused with chamomile & jojoba for smooth, painless hair removal."
+    },
+    {
+      "id": 6,
+      "name": "Professional Waxing Spatulas & Applicator Set",
+      "category": "wax",
+      "price": 280,
+      "oldPrice": 350,
+      "image": "wax-2.jpg",
+      "badge": "Essential",
+      "description": "Premium birch wood spatulas and applicators for hygienic, even wax application."
+    }
+  ]
+}
