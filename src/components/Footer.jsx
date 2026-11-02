@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="footer" id="footer">
       <img
-        src="/images/logo_update.jpg"
+        src="/images/logo_ms.png"
         alt="MS Beauty Products"
         className="footer-logo"
         width="90"

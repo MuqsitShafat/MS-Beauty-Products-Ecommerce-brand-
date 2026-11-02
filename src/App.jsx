@@ -12,6 +12,7 @@ import WishlistModal from './components/WishlistModal.jsx'
 import Toast from './components/Toast.jsx'
 import Footer from './components/Footer.jsx'
 import NotFoundPage from './components/NotFoundPage.jsx'
+import ProductModal from './components/ProductModal.jsx'
 
 // Helper to determine route from current window.location
 function getRouteFromLocation() {
@@ -20,7 +21,7 @@ function getRouteFromLocation() {
 
   if (path.startsWith('/admin') || hash.startsWith('#admin')) return '/admin'
   if (path.startsWith('/cart') || hash.startsWith('#cart')) return '/cart'
-  if (path.startsWith('/shop') || hash.startsWith('#shop')) return '/shop'
+  if (path.startsWith('/shop') || hash.startsWith('#shop') || path.includes('shop.html')) return '/shop'
   if (path === '/' || path === '/index.html' || path === '') return '/'
   return '/404'
 }
@@ -225,6 +226,44 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [toast, setToast] = useState(null)
+
+  // Product Detail Modal state (for Home, Shop, and Direct Ad Links)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+
+  const handleOpenProductModal = (product) => {
+    setSelectedProduct(product)
+    setIsProductModalOpen(true)
+  }
+
+  const handleCloseProductModal = () => {
+    setIsProductModalOpen(false)
+    // Clean up query param if present without refreshing page
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('product')) {
+      params.delete('product')
+      const newQuery = params.toString() ? `?${params.toString()}` : ''
+      window.history.replaceState({}, '', `${window.location.pathname}${newQuery}`)
+    }
+  }
+
+  // Deep-link check for Ad URLs like ?product=slug or shop.html?product=slug
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const productParam = params.get('product')
+    if (productParam && products.length > 0) {
+      const targetSlug = productParam.toLowerCase().trim()
+      const found = products.find(p =>
+        (p.slug && p.slug.toLowerCase() === targetSlug) ||
+        p.id.toString() === targetSlug ||
+        p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === targetSlug
+      )
+      if (found) {
+        setSelectedProduct(found)
+        setIsProductModalOpen(true)
+      }
+    }
+  }, [products, currentRoute])
 
   // Save Cart whenever it changes
   useEffect(() => {
@@ -519,6 +558,7 @@ export default function App() {
           onNavigate={navigate}
           selectedCategory={shopCategory}
           onSelectCategory={handleCategorySelect}
+          onOpenProductModal={handleOpenProductModal}
         />
       ) : currentRoute === '/cart' ? (
         <CartPage
@@ -631,6 +671,7 @@ export default function App() {
                         onBuyNow={handleBuyNow}
                         isWishlisted={wishlist.some(w => w.id === p.id)}
                         onToggleWishlist={handleToggleWishlist}
+                        onOpenProductModal={handleOpenProductModal}
                       />
                     ))}
                   </div>
@@ -676,6 +717,16 @@ export default function App() {
         onRemoveFromWishlist={id => handleToggleWishlist({ id })}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+      />
+
+      {/* Product Detail Modal with Infinite Auto-Scroll Carousel & Buy Now */}
+      <ProductModal
+        isOpen={isProductModalOpen}
+        product={selectedProduct}
+        onClose={handleCloseProductModal}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        onNavigate={navigate}
       />
 
       {/* Notification Toast */}

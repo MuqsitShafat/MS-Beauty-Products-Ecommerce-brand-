@@ -10,10 +10,12 @@ export default function ShopPage({
   onToggleWishlist,
   onNavigate,
   selectedCategory = 'all',
-  onSelectCategory
+  onSelectCategory,
+  onOpenProductModal
 }) {
   const [searchFilter, setSearchFilter] = useState('')
-  const isManualScrolling = useRef(false)
+  const [activeCategoryPill, setActiveCategoryPill] = useState(selectedCategory || 'all')
+  const initialScrollDone = useRef(false)
 
   // Scroll to category section
   const scrollToCategorySection = (slug) => {
@@ -23,53 +25,47 @@ export default function ShopPage({
     }
     const el = document.getElementById(`shop-cat-${slug}`)
     if (el) {
-      const navOffset = 125
+      const navOffset = 130
       const rect = el.getBoundingClientRect()
       const targetY = rect.top + window.pageYOffset - navOffset
       window.scrollTo({ top: targetY, behavior: 'smooth' })
     }
   }
 
-  // Handle selectedCategory change or initial mount scroll
+  // Handle selectedCategory change ONLY when navigated into from navbar or link initially
   useEffect(() => {
-    if (selectedCategory && selectedCategory !== 'all') {
-      isManualScrolling.current = true
+    if (!initialScrollDone.current && selectedCategory && selectedCategory !== 'all') {
+      initialScrollDone.current = true
+      setActiveCategoryPill(selectedCategory)
       const timer = setTimeout(() => {
         scrollToCategorySection(selectedCategory)
-        setTimeout(() => {
-          isManualScrolling.current = false
-        }, 600)
       }, 150)
       return () => clearTimeout(timer)
-    } else if (selectedCategory === 'all') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [selectedCategory])
 
-  // Scroll spy: update active category tab as user scrolls through catalogue
+  // Passive observer: updates the active pill ONLY, never auto-scrolls or pushes the page!
   useEffect(() => {
-    const observerCallback = (entries) => {
-      if (isManualScrolling.current) return
-      const visible = entries.find(e => e.isIntersecting)
-      if (visible) {
-        const catSlug = visible.target.getAttribute('data-slug')
-        if (catSlug && onSelectCategory && catSlug !== selectedCategory) {
-          onSelectCategory(catSlug)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const slug = entry.target.getAttribute('data-slug')
+          if (slug) {
+            setActiveCategoryPill(slug)
+          }
         }
-      }
-    }
-
-    const observer = new IntersectionObserver(observerCallback, {
+      })
+    }, {
       root: null,
-      rootMargin: '-130px 0px -50% 0px',
-      threshold: 0.1
+      rootMargin: '-100px 0px -60% 0px',
+      threshold: 0
     })
 
-    const sectionElements = document.querySelectorAll('.shop-category-section')
-    sectionElements.forEach(el => observer.observe(el))
+    const sections = document.querySelectorAll('.shop-category-section')
+    sections.forEach(s => observer.observe(s))
 
     return () => observer.disconnect()
-  }, [categories, onSelectCategory, selectedCategory])
+  }, [categories])
 
   // Filter products by search text
   const matchSearch = (p) => {
@@ -88,14 +84,11 @@ export default function ShopPage({
   const isWishlisted = (id) => wishlist.some(w => w.id === id)
 
   const handleCategoryClick = (slug) => {
-    isManualScrolling.current = true
+    setActiveCategoryPill(slug)
     if (onSelectCategory) {
       onSelectCategory(slug)
     }
     scrollToCategorySection(slug)
-    setTimeout(() => {
-      isManualScrolling.current = false
-    }, 700)
   }
 
   return (
@@ -142,7 +135,7 @@ export default function ShopPage({
           <div className="shop-category-filters">
             <button
               type="button"
-              className={`cat-pill ${selectedCategory === 'all' ? 'active' : ''}`}
+              className={`cat-pill ${activeCategoryPill === 'all' ? 'active' : ''}`}
               onClick={() => handleCategoryClick('all')}
             >
               All Products ({products.length})
@@ -153,7 +146,7 @@ export default function ShopPage({
                 <button
                   key={c.slug}
                   type="button"
-                  className={`cat-pill ${selectedCategory === c.slug ? 'active' : ''}`}
+                  className={`cat-pill ${activeCategoryPill === c.slug ? 'active' : ''}`}
                   onClick={() => handleCategoryClick(c.slug)}
                 >
                   {c.title} ({count})
@@ -207,6 +200,7 @@ export default function ShopPage({
                       onBuyNow={onBuyNow}
                       isWishlisted={isWishlisted(p.id)}
                       onToggleWishlist={onToggleWishlist}
+                      onOpenProductModal={onOpenProductModal}
                     />
                   ))}
                 </div>

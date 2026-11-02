@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import site from '../data/site.json'
+import '../admin.css'
 
 const ADMIN_EMAIL = 'beautyproductsbyms@gmail.com'
 const ADMIN_PASS = 'Jabir#932'
@@ -33,13 +34,22 @@ export default function AdminPanel({
   // Product modal state & Gallery upload state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
-  const [selectedImageFile, setSelectedImageFile] = useState(null)
+  const [galleryImages, setGalleryImages] = useState([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
+  const [copiedLinkSlug, setCopiedLinkSlug] = useState(null)
+
+  const generateSlug = (text) => {
+    return (text || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+  }
 
   const [productForm, setProductForm] = useState({
     name: '',
+    slug: '',
     category: 'facials',
     price: '',
     oldPrice: '',
@@ -87,10 +97,10 @@ export default function AdminPanel({
   // Open product modal for add or edit
   const openAddProduct = () => {
     setEditingProduct(null)
-    setImagePreview(null)
-    setSelectedImageFile(null)
+    setGalleryImages([])
     setProductForm({
       name: '',
+      slug: '',
       category: 'facials',
       price: '',
       oldPrice: '',
@@ -103,10 +113,26 @@ export default function AdminPanel({
 
   const openEditProduct = (p) => {
     setEditingProduct(p)
-    setImagePreview(p.image ? `/images/products/${p.image}` : null)
-    setSelectedImageFile(null)
+    // Gather all existing images (both p.images and p.image)
+    const existingList = (Array.isArray(p.images) && p.images.length > 0)
+      ? p.images
+      : (p.image ? [p.image] : [])
+
+    setGalleryImages(
+      existingList.map((imgName, idx) => ({
+        id: `existing-${idx}-${imgName}`,
+        previewUrl: (imgName.startsWith('data:') || imgName.startsWith('http'))
+          ? imgName
+          : `/images/products/${imgName}`,
+        filename: imgName,
+        isExisting: true,
+        file: null
+      }))
+    )
+
     setProductForm({
       name: p.name,
+      slug: p.slug || generateSlug(p.name),
       category: p.category,
       price: p.price,
       oldPrice: p.oldPrice || '',
@@ -117,64 +143,116 @@ export default function AdminPanel({
     setIsProductModalOpen(true)
   }
 
-  // Handle gallery image file selection
-  const handleGalleryImageChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  // Handle gallery image file selection (Supports multiple files at once or adding sequentially)
+  const handleGalleryImagesChange = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
 
-    setSelectedImageFile(file)
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setGalleryImages(prev => [
+          ...prev,
+          {
+            id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            previewUrl: event.target.result,
+            file: file,
+            filename: file.name,
+            isExisting: false
+          }
+        ])
+      }
+      reader.readAsDataURL(file)
+    })
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setImagePreview(event.target.result)
-    }
-    reader.readAsDataURL(file)
+    // Reset input so same file can be selected again if needed
+    e.target.value = ''
   }
 
-  // Save product and automatically store image in project folder via Vite API
+  // Remove a photo from gallery
+  const handleRemoveGalleryImage = (idToRemove) => {
+    setGalleryImages(prev => prev.filter(img => img.id !== idToRemove))
+  }
+
+  // Set selected photo as main cover (moves to first position)
+  const handleSetCoverImage = (indexToMove) => {
+    if (indexToMove === 0) return
+    setGalleryImages(prev => {
+      const copy = [...prev]
+      const [item] = copy.splice(indexToMove, 1)
+      copy.unshift(item)
+      return copy
+    })
+  }
+
+  // Shift image position left / right
+  const handleMoveGalleryImage = (index, direction) => {
+    setGalleryImages(prev => {
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev
+      const copy = [...prev]
+      const temp = copy[index]
+      copy[index] = copy[targetIndex]
+      copy[targetIndex] = temp
+      return copy
+    })
+  }
+
+  // Save product and store all images in project folder via Vite API
   const handleSaveProduct = async (e) => {
     e.preventDefault()
     if (!productForm.name.trim() || !productForm.price) return
 
-    let finalImageName = productForm.image || 'facial-1.jpg'
+    setIsUploading(true)
+    const finalImages = []
 
-    // If an image was chosen from gallery, upload and store in project folder
-    if (selectedImageFile && imagePreview) {
-      setIsUploading(true)
-      try {
-        const response = await fetch('/api/upload-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: selectedImageFile.name,
-            base64Data: imagePreview
-          })
-        })
+    try {
+      for (const imgItem of galleryImages) {
+        if (imgItem.isExisting) {
+          finalImages.push(imgItem.filename)
+        } else if (imgItem.file && imgItem.previewUrl) {
+          // Upload new photo to project folder
+          try {
+            const response = await fetch('/api/upload-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                filename: imgItem.filename,
+                base64Data: imgItem.previewUrl
+              })
+            })
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data.filename) {
-            finalImageName = data.filename
+            if (response.ok) {
+              const data = await response.json()
+              finalImages.push(data.filename || imgItem.filename)
+            } else {
+              // Fallback if endpoint fails
+              finalImages.push(imgItem.previewUrl)
+            }
+          } catch (err) {
+            console.warn('Disk upload failed, using fallback:', err)
+            finalImages.push(imgItem.previewUrl)
           }
-        } else {
-          // Fallback if offline: store base64 directly
-          finalImageName = imagePreview
+        } else if (imgItem.filename) {
+          finalImages.push(imgItem.filename)
         }
-      } catch (err) {
-        console.warn('Direct disk upload fallback to base64 preview:', err)
-        finalImageName = imagePreview
-      } finally {
-        setIsUploading(false)
       }
+    } finally {
+      setIsUploading(false)
     }
+
+    const primaryImage = finalImages[0] || productForm.image || 'facial-1.jpg'
+    const finalImageList = finalImages.length > 0 ? finalImages : [primaryImage]
 
     const productPayload = {
       name: productForm.name.trim(),
+      slug: (productForm.slug || '').trim() || generateSlug(productForm.name),
       category: productForm.category,
       price: Number(productForm.price),
       oldPrice: productForm.oldPrice ? Number(productForm.oldPrice) : null,
       badge: productForm.badge.trim() || null,
-      image: finalImageName,
+      image: primaryImage,
+      images: finalImageList,
       description: productForm.description.trim()
     }
 
@@ -184,7 +262,7 @@ export default function AdminPanel({
         onShowToast({
           type: 'success',
           title: 'Product Updated',
-          message: `${productPayload.name} saved successfully.`
+          message: `${productPayload.name} (${finalImageList.length} photos) saved successfully.`
         })
       }
     } else {
@@ -196,14 +274,32 @@ export default function AdminPanel({
         onShowToast({
           type: 'success',
           title: 'Product Created',
-          message: `${productPayload.name} saved and stored in project folder.`
+          message: `${productPayload.name} (${finalImageList.length} photos) saved in project folder.`
         })
       }
     }
 
     setIsProductModalOpen(false)
-    setSelectedImageFile(null)
-    setImagePreview(null)
+    setGalleryImages([])
+  }
+
+  // Delete product and automatically clean up image file from public/images/products/
+  const handleDeleteProductWithFile = async (p) => {
+    if (window.confirm(`Delete product "${p.name}"?`)) {
+      try {
+        await fetch('/api/delete-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: p.image,
+            images: p.images
+          })
+        })
+      } catch (err) {
+        console.warn('Could not delete image file:', err)
+      }
+      onDeleteProduct(p.id)
+    }
   }
 
   // If not logged in, render the secure Login Gate
@@ -214,7 +310,7 @@ export default function AdminPanel({
           <div className="admin-dark-login-header">
             <div className="admin-logo-badge">
               <img
-                src="/images/logo_update.jpg"
+                src="/images/logo_ms.png"
                 alt="MS Beauty"
                 className="admin-login-logo"
                 onError={e => {
@@ -348,7 +444,7 @@ export default function AdminPanel({
         <div className="admin-dark-sidebar-header">
           <div className="admin-brand-icon-box">
             <img
-              src="/images/logo_update.jpg"
+              src="/images/logo_ms.png"
               alt="MS Beauty Products"
               className="admin-brand-logo-img"
               onError={e => {
@@ -905,11 +1001,8 @@ export default function AdminPanel({
                         <button
                           type="button"
                           className="admin-btn-del-prod"
-                          onClick={() => {
-                            if (window.confirm(`Delete product "${p.name}"?`)) {
-                              onDeleteProduct(p.id)
-                            }
-                          }}
+                          onClick={() => handleDeleteProductWithFile(p)}
+                          title="Delete Product and Remove Image from Server"
                         >
                           <span className="material-icons">delete</span>
                         </button>
@@ -921,82 +1014,22 @@ export default function AdminPanel({
             </section>
           )}
 
-          {/* VIEW: FINANCE (Payment Verification) */}
+          {/* VIEW: FINANCE (Payment Verification & Product Ad Links) */}
           {activeSection === 'finance' && (
             <section className="admin-table-card">
               <div className="admin-table-card-header">
                 <div>
-                  <h3 className="admin-card-heading">Payment Accounts & Online Verification</h3>
+                  <h3 className="admin-card-heading">Online Payment Orders & Ad Campaign Links</h3>
                   <p className="admin-card-subheading">
-                    Official accounts where customers send online advance payments to save Rs. 200.
+                    Verify customer online transactions and copy direct campaign URLs for all active live products.
                   </p>
                 </div>
               </div>
 
-              {/* Bank Accounts Grid */}
-              <div className="admin-accounts-grid">
-                <div className="admin-account-card">
-                  <div className="account-icon-wrap meezan">
-                    <span className="material-icons">account_balance</span>
-                  </div>
-                  <h4>Meezan Bank</h4>
-                  <div className="account-row">
-                    <span>Account Title:</span>
-                    <strong>Muhammad Jabir</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Account Number:</span>
-                    <strong className="copyable-text">02940108985161</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Branch:</span>
-                    <span>Allama Iqbal Town, Lahore</span>
-                  </div>
-                </div>
-
-                <div className="admin-account-card">
-                  <div className="account-icon-wrap easypaisa">
-                    <span className="material-icons">phone_android</span>
-                  </div>
-                  <h4>Easypaisa</h4>
-                  <div className="account-row">
-                    <span>Account Title:</span>
-                    <strong>Muhammad Jabir</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Mobile Number:</span>
-                    <strong className="copyable-text">03284430589</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Status:</span>
-                    <span className="status-badge-active">Active</span>
-                  </div>
-                </div>
-
-                <div className="admin-account-card">
-                  <div className="account-icon-wrap jazzcash">
-                    <span className="material-icons">payments</span>
-                  </div>
-                  <h4>JazzCash</h4>
-                  <div className="account-row">
-                    <span>Account Title:</span>
-                    <strong>Muhammad Jabir</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Mobile Number:</span>
-                    <strong className="copyable-text">03284430589</strong>
-                  </div>
-                  <div className="account-row">
-                    <span>Status:</span>
-                    <span className="status-badge-active">Active</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Online Payment Orders */}
-              <div className="admin-online-orders-section">
-                <h4 style={{ color: '#ffffff', margin: '24px 0 12px' }}>
-                  Orders with Online Payment ({orders.filter(o => o.paymentMethod === 'online').length})
+              <div className="admin-online-orders-section" style={{ marginTop: '8px' }}>
+                <h4 style={{ color: 'var(--ink, #2A2D26)', margin: '10px 0 16px', fontSize: '1.15rem' }}>
+                  Orders with Online Advance Payment ({orders.filter(o => o.paymentMethod === 'online').length})
                 </h4>
                 <div className="admin-table-responsive">
                   <table className="admin-dark-table">
@@ -1014,7 +1047,7 @@ export default function AdminPanel({
                     <tbody>
                       {orders.filter(o => o.paymentMethod === 'online').length === 0 ? (
                         <tr>
-                          <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#6a6e63' }}>
                             No online payment orders recorded yet.
                           </td>
                         </tr>
@@ -1053,6 +1086,7 @@ export default function AdminPanel({
                                   target="_blank"
                                   rel="noreferrer"
                                   className="admin-chat-wa-btn"
+                                  title="Chat on WhatsApp"
                                 >
                                   <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                                     <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.188 8.188 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.12.82.83-3.04-.19-.3a8.188 8.188 0 0 1-1.26-4.48c0-4.54 3.7-8.23 8.24-8.23m4.52 11.53c-.25-.12-1.47-.72-1.7-.81-.23-.08-.4-.12-.56.12-.17.25-.65.81-.8 1-.15.18-.29.2-.54.08-.25-.12-1.05-.39-2-1.23-.74-.66-1.25-1.48-1.39-1.73-.15-.25-.02-.38.11-.51.11-.11.25-.29.37-.44.12-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08 0 1.22.89 2.41 1.01 2.58.12.17 1.76 2.68 4.26 3.76.6.26 1.06.41 1.42.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29"/>
@@ -1062,6 +1096,102 @@ export default function AdminPanel({
                             </tr>
                           ))
                       )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* LIVE PRODUCTS — AD PRODUCT LINKS GENERATOR (User Request) */}
+              <div className="admin-ad-links-section">
+                <div className="admin-ad-links-header">
+                  <div>
+                    <h4>Live Products — Ad & Video Campaign Links ({products.length})</h4>
+                    <p>
+                      Copy these direct URLs to paste into your Facebook, Instagram, or TikTok video ads.
+                      When customers click your ad, they directly see this product modal with the "Shop More" option!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="admin-table-responsive">
+                  <table className="admin-dark-table">
+                    <thead>
+                      <tr>
+                        <th>PRODUCT</th>
+                        <th>CATEGORY</th>
+                        <th>LINK SLUG (FOR ADS)</th>
+                        <th>FULL CAMPAIGN URL</th>
+                        <th>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map(p => {
+                        const slug = p.slug || generateSlug(p.name)
+                        const fullUrl = `${window.location.origin}/shop.html?product=${slug}`
+                        const isCopied = copiedLinkSlug === slug
+
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <img
+                                src={p.image.startsWith('data:') ? p.image : `/images/products/${p.image}`}
+                                alt={p.name}
+                                style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
+                                onError={e => {
+                                  e.currentTarget.onerror = null
+                                  e.currentTarget.src = '/images/logo.png'
+                                }}
+                              />
+                              <strong>{p.name}</strong>
+                            </td>
+                            <td>
+                              <span className="admin-prod-cat">{(p.category || '').replace('-', ' ')}</span>
+                            </td>
+                            <td>
+                              <span className="ad-slug-badge">{slug}</span>
+                            </td>
+                            <td>
+                              <div className="ad-link-box" title={fullUrl}>
+                                {fullUrl}
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className={`btn-copy-ad-link ${isCopied ? 'copied' : ''}`}
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(fullUrl)
+                                    setCopiedLinkSlug(slug)
+                                    if (onShowToast) {
+                                      onShowToast({
+                                        type: 'success',
+                                        title: 'Ad Link Copied!',
+                                        message: `Copied URL for ${p.name}`
+                                      })
+                                    }
+                                    setTimeout(() => setCopiedLinkSlug(null), 2500)
+                                  }}
+                                >
+                                  <span className="material-icons" style={{ fontSize: '16px' }}>
+                                    {isCopied ? 'check' : 'content_copy'}
+                                  </span>
+                                  <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
+                                </button>
+                                <a
+                                  href={`/shop?product=${slug}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn-test-ad-link"
+                                  title="Test Open Link"
+                                >
+                                  <span className="material-icons" style={{ fontSize: '16px' }}>open_in_new</span>
+                                </a>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1094,10 +1224,38 @@ export default function AdminPanel({
                   id="prod-name"
                   required
                   value={productForm.name}
-                  onChange={e => setProductForm({ ...productForm, name: e.target.value })}
+                  onChange={e => {
+                    const newName = e.target.value
+                    setProductForm(prev => ({
+                      ...prev,
+                      name: newName,
+                      slug: (!editingProduct && (!prev.slug || prev.slug === generateSlug(prev.name)))
+                        ? generateSlug(newName)
+                        : prev.slug
+                    }))
+                  }}
                   placeholder="e.g. Gold Radiance Luxury Facial Kit"
                   className="dark-input"
                 />
+              </div>
+
+              {/* Product Link Name / Slug for Social & Video Ads (User Request) */}
+              <div className="form-group">
+                <label htmlFor="prod-slug">Product Link Name / Slug (For Ads & Direct Links)</label>
+                <div className="slug-input-wrapper">
+                  <span className="slug-prefix">shop.html?product=</span>
+                  <input
+                    type="text"
+                    id="prod-slug"
+                    value={productForm.slug || ''}
+                    onChange={e => setProductForm({ ...productForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '-') })}
+                    placeholder="e.g. gold-facial-kit or sp-handheld-fan"
+                    className="dark-input slug-input"
+                  />
+                </div>
+                <small className="slug-hint">
+                  Customize this name for ad links. You can copy the complete live link from the Payment Verification tab.
+                </small>
               </div>
 
               <div className="form-row-2">
@@ -1128,34 +1286,143 @@ export default function AdminPanel({
                 </div>
               </div>
 
-              {/* GALLERY IMAGE SELECTION BOX (User Request) */}
+              {/* MULTI-IMAGE GALLERY SELECTION BOX */}
               <div className="form-group">
-                <label>Product Image (Choose from Device Gallery)</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ margin: 0 }}>Product Images (Choose from Device Gallery)</label>
+                  {galleryImages.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-add-more-photos"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <span className="material-icons" style={{ fontSize: '16px' }}>add_photo_alternate</span>
+                      <span>+ Add More Photos</span>
+                    </button>
+                  )}
+                </div>
 
-                {/* Hidden File Input */}
+                {/* Hidden File Input supporting multiple file selection */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={handleGalleryImageChange}
+                  multiple
+                  onChange={handleGalleryImagesChange}
                   style={{ display: 'none' }}
                   id="gallery-file-input"
                 />
 
                 <div className="gallery-picker-box">
-                  {imagePreview ? (
-                    <div className="gallery-preview-container">
-                      <img
-                        src={imagePreview}
-                        alt="Product Preview"
-                        className="gallery-preview-thumb"
-                      />
-                      <div className="gallery-preview-info">
-                        <strong className="gallery-file-name">
-                          {selectedImageFile ? selectedImageFile.name : productForm.image}
-                        </strong>
+                  {galleryImages.length > 0 ? (
+                    <div className="gallery-multi-preview-wrap">
+                      <div className="gallery-multi-header">
+                        <div className="gallery-multi-title">
+                          <span className="material-icons">photo_library</span>
+                          <span>Gallery Photos ({galleryImages.length})</span>
+                        </div>
+                        <p className="gallery-multi-subtitle">
+                          ★ 1st photo is Main Cover. Click "Set as Main" or use arrows to rearrange.
+                        </p>
+                      </div>
+
+                      <div className="gallery-multi-grid">
+                        {galleryImages.map((img, idx) => {
+                          const isCover = idx === 0
+                          return (
+                            <div
+                              key={img.id || idx}
+                              className={`gallery-multi-card ${isCover ? 'is-cover' : ''}`}
+                            >
+                              <div className="gallery-card-thumb-wrap">
+                                <img
+                                  src={img.previewUrl}
+                                  alt={`Product image ${idx + 1}`}
+                                  className="gallery-card-thumb"
+                                  onError={e => {
+                                    e.currentTarget.onerror = null
+                                    e.currentTarget.src = '/images/logo.png'
+                                  }}
+                                />
+
+                                {isCover ? (
+                                  <span className="gallery-cover-badge">
+                                    ★ Cover
+                                  </span>
+                                ) : (
+                                  <span className="gallery-order-badge">
+                                    #{idx + 1}
+                                  </span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  className="gallery-btn-remove"
+                                  onClick={() => handleRemoveGalleryImage(img.id)}
+                                  title="Remove this photo"
+                                  aria-label="Remove image"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="gallery-card-info">
+                                <span className="gallery-card-name" title={img.filename}>
+                                  {img.filename}
+                                </span>
+
+                                <div className="gallery-card-actions">
+                                  {!isCover && (
+                                    <button
+                                      type="button"
+                                      className="btn-set-cover"
+                                      onClick={() => handleSetCoverImage(idx)}
+                                      title="Set this as product cover image"
+                                    >
+                                      ★ Make Cover
+                                    </button>
+                                  )}
+
+                                  <div className="gallery-order-btns">
+                                    <button
+                                      type="button"
+                                      className="gallery-order-btn"
+                                      disabled={idx === 0}
+                                      onClick={() => handleMoveGalleryImage(idx, -1)}
+                                      title="Move Left"
+                                    >
+                                      ‹
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="gallery-order-btn"
+                                      disabled={idx === galleryImages.length - 1}
+                                      onClick={() => handleMoveGalleryImage(idx, 1)}
+                                      title="Move Right"
+                                    >
+                                      ›
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {/* Add More Tile */}
+                        <div
+                          className="gallery-add-more-tile"
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Click to add more photos"
+                        >
+                          <span className="material-icons">add_a_photo</span>
+                          <span>Add More</span>
+                        </div>
+                      </div>
+
+                      <div className="gallery-bottom-status">
                         <span className="gallery-file-badge">
-                          ✓ Ready to store in projects folder (public/images/products)
+                          ✓ All {galleryImages.length} photo{galleryImages.length > 1 ? 's' : ''} will be stored in projects folder & cycle in the customer modal carousel.
                         </span>
                         <button
                           type="button"
@@ -1163,7 +1430,7 @@ export default function AdminPanel({
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <span className="material-icons">photo_camera</span>
-                          <span>Choose Another Picture</span>
+                          <span>Upload More Photos</span>
                         </button>
                       </div>
                     </div>
@@ -1173,11 +1440,13 @@ export default function AdminPanel({
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <span className="material-icons gallery-upload-icon">add_photo_alternate</span>
-                      <strong>Click to Select Image from Gallery / Files</strong>
-                      <p>Supports PNG, JPG, WebP. It will be stored in your project's folder upon saving.</p>
+                      <strong>Click to Select Photos from Device Gallery</strong>
+                      <p>
+                        You can select multiple photos at once! They will be stored in your project folder and loop in the customer modal.
+                      </p>
                       <button type="button" className="btn-browse-gallery">
                         <span className="material-icons">photo_library</span>
-                        <span>Browse Device Gallery</span>
+                        <span>Browse Device Gallery (Multi-Select)</span>
                       </button>
                     </div>
                   )}
@@ -1277,7 +1546,7 @@ export default function AdminPanel({
             <div id="printable-shipping-label" className="shipping-label-card">
               <div className="label-header-center">
                 <img
-                  src="/images/logo_update.jpg"
+                  src="/images/logo_ms.png"
                   alt="MS Beauty Products"
                   className="label-logo-img"
                   onError={e => {

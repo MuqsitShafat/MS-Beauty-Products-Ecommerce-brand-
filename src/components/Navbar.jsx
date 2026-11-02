@@ -118,7 +118,7 @@ export default function Navbar({
               aria-label="MS Beauty Home"
             >
               <img
-                src="/images/logo_update.jpg"
+                src="/images/logo_ms.png"
                 alt="MS Beauty Logo"
                 className="nav-logo-img"
                 width="42"
@@ -261,7 +261,7 @@ export default function Navbar({
         <div className="mobile-drawer-header">
           <div className="mobile-drawer-logo">
             <img
-              src="/images/logo_update.jpg"
+              src="/images/logo_ms.png"
               alt="MS Beauty"
               width="36"
               height="36"

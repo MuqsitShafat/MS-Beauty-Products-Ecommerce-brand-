@@ -704,10 +704,15 @@ export default function CartPage({
                   </div>
 
                   {paymentMethod === 'cod' && (
-                    <div className="summary-row">
-                      <span>Cash on Delivery (COD) Fee</span>
-                      <span className="fee-plus">+ Rs 99</span>
-                    </div>
+                    <>
+                      <div className="summary-row">
+                        <span>Cash on Delivery (COD) Fee</span>
+                        <span className="fee-plus">+ Rs 99</span>
+                      </div>
+                      <div className="cod-save-tip">
+                        💡 Pay online to eliminate the Rs 99 COD fee &amp; get Rs 200 instant discount!
+                      </div>
+                    </>
                   )}
 
                   {paymentMethod === 'online' && (

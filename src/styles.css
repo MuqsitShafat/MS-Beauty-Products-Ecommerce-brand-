@@ -1,3 +1,4 @@
+@import './admin.css';
 :root {
   --cream: #F5EBDD;
   --ink: #2A2D26;
@@ -253,6 +254,7 @@ img {
 
 .brand-title {
   font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -847,8 +849,10 @@ img {
 
 .cat-section-header h2 {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-weight: 600;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 4.2vw, 2.5rem);
+  letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
 .cat-sub {
@@ -992,11 +996,11 @@ img {
 }
 
 .card-category {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--tan);
-  font-weight: 600;
+  color: #8C6D4F;
+  font-weight: 700;
   margin-bottom: 2px;
 }
 
@@ -1366,10 +1370,11 @@ img {
 
 .cat-heading {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 600;
+  font-size: clamp(1.9rem, 4.2vw, 2.7rem);
+  font-weight: 800;
   color: var(--ink);
   line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .cat-desc {
@@ -3509,9 +3514,11 @@ img {
 
 .footer .brand {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.6rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-style: italic;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
 }
 
 .footer-tagline {
@@ -3777,7 +3784,8 @@ img {
   }
 
   .brand-title {
-    font-size: 1.15rem;
+    font-style: italic;
+    font-size: 1.05rem;
     line-height: 1.1;
     white-space: nowrap;
   }
@@ -4229,6 +4237,682 @@ img {
   background: #1eb857;
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45);
+}
+
+/* ==========================================================================
+   PRODUCT DETAIL MODAL & INFINITE AUTO-SCROLL CAROUSEL
+   ========================================================================== */
+
+.product-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 45, 38, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.product-modal-card {
+  background: var(--paper);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 920px;
+  max-height: 92vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(185, 165, 140, 0.35);
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.product-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(42, 45, 38, 0.08);
+  border: none;
+  font-size: 1.1rem;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.product-modal-close:hover {
+  background: var(--ink);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.product-modal-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 0;
+}
+
+/* CAROUSEL MEDIA */
+.product-modal-media {
+  background: #f0ebe4;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-right: 1px solid rgba(185, 165, 140, 0.25);
+  position: relative;
+}
+
+.carousel-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  max-width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.carousel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.carousel-viewport:hover .carousel-img {
+  transform: scale(1.03);
+}
+
+.carousel-badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 3;
+}
+
+.modal-badge {
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.modal-badge.discount-badge {
+  background: var(--terracotta);
+}
+
+/* CAROUSEL ARROWS */
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.carousel-arrow:hover {
+  background: var(--ink);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.carousel-arrow-prev {
+  left: 10px;
+}
+
+.carousel-arrow-next {
+  right: 10px;
+}
+
+/* CAROUSEL DOTS */
+.carousel-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(42, 45, 38, 0.25);
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  padding: 0;
+}
+
+.carousel-dot.active {
+  background: var(--ink);
+  width: 22px;
+  border-radius: 6px;
+}
+
+/* THUMBNAIL STRIP */
+.carousel-thumb-strip {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 4px;
+}
+
+.carousel-thumb-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.carousel-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carousel-thumb-btn.active {
+  border-color: var(--sage-dark);
+  box-shadow: 0 0 0 2px rgba(126, 143, 115, 0.4);
+}
+
+/* RIGHT INFO COLUMN */
+.product-modal-info {
+  padding: 32px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.modal-cat-tag {
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: #8C6D4F;
+  text-transform: uppercase;
+}
+
+.modal-product-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.modal-price-box {
+  margin: 14px 0 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(185, 165, 140, 0.3);
+}
+
+.modal-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-old-price {
+  font-size: 1.05rem;
+  color: #8a8d86;
+}
+
+.modal-current-price {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.modal-save-pill {
+  background: rgba(184, 91, 53, 0.12);
+  color: var(--terracotta);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.modal-perks-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.perk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #3f443b;
+  background: rgba(126, 143, 115, 0.12);
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.perk-chip .material-icons {
+  font-size: 18px;
+  color: var(--sage-dark);
+}
+
+.perk-chip.online-chip {
+  background: rgba(224, 159, 62, 0.15);
+  color: #7a4f0b;
+}
+
+.perk-chip.online-chip .material-icons {
+  color: #c97e09;
+}
+
+.modal-description-box {
+  margin-bottom: 18px;
+}
+
+.modal-desc-heading {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.modal-desc-text {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* QUANTITY ROW */
+.modal-qty-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  background: #f7f3ec;
+  border-radius: 10px;
+}
+
+.modal-qty-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modal-qty-control {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d4c8b8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modal-qty-btn {
+  background: transparent;
+  border: none;
+  width: 34px;
+  height: 32px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.modal-qty-btn:hover {
+  background: #f0ebe4;
+}
+
+.modal-qty-val {
+  min-width: 32px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-subtotal-text {
+  margin-left: auto;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+.modal-subtotal-text strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* ACTIONS */
+.modal-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.btn-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-cart {
+  background: #ffffff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+
+.btn-modal-cart:hover {
+  background: #f0ebe4;
+  transform: translateY(-2px);
+}
+
+.btn-modal-buynow {
+  background: var(--ink);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(42, 45, 38, 0.25);
+}
+
+.btn-modal-buynow:hover {
+  background: #1c1e19;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(42, 45, 38, 0.35);
+}
+
+/* FOOTER LINKS */
+.modal-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.modal-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #25D366;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.modal-wa-btn:hover {
+  background: #1eb857;
+  transform: translateY(-1px);
+}
+
+.modal-shop-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--sage-dark);
+  border: 1px solid rgba(126, 143, 115, 0.4);
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-shop-more-btn:hover {
+  background: rgba(126, 143, 115, 0.1);
+  border-color: var(--sage-dark);
+}
+
+/* COD TIP NOTICE IN CART ORDER SUMMARY */
+.cod-save-tip {
+  font-size: 0.82rem;
+  color: #7a4f0b;
+  background: rgba(224, 159, 62, 0.12);
+  border-left: 3px solid #e09f3e;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 6px 0 10px;
+  line-height: 1.35;
+  font-weight: 500;
+  animation: fadeInTip 0.25s ease-in;
+}
+
+@keyframes fadeInTip {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* RESPONSIVE MODAL (Optimized for Mobile so Buy Now fits cleanly without scrolling) */
+@media (max-width: 768px) {
+  .product-modal-backdrop {
+    padding: 10px 8px;
+  }
+  .product-modal-card {
+    max-width: 440px;
+    max-height: 94vh;
+    border-radius: 14px;
+  }
+  .product-modal-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-modal-media {
+    border-right: none;
+    border-bottom: 1px solid rgba(185, 165, 140, 0.2);
+    padding: 8px 10px 4px;
+  }
+  .carousel-viewport {
+    width: 100%;
+    max-height: 200px;
+    aspect-ratio: 16 / 10;
+    border-radius: 10px;
+  }
+  .carousel-img {
+    object-fit: contain;
+    background: #ffffff;
+  }
+  .carousel-arrow {
+    width: 32px;
+    height: 32px;
+  }
+  .carousel-arrow .material-icons {
+    font-size: 18px;
+  }
+  .carousel-dots {
+    margin-top: 6px;
+  }
+  .carousel-thumb-strip {
+    margin-top: 4px;
+    gap: 6px;
+  }
+  .carousel-thumb-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
+  .product-modal-info {
+    padding: 10px 14px 14px;
+  }
+  .modal-cat-tag {
+    font-size: 0.68rem;
+  }
+  .modal-product-title {
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin-top: 2px;
+  }
+  .modal-price-box {
+    margin: 4px 0 6px;
+    padding-bottom: 6px;
+  }
+  .modal-current-price {
+    font-size: 1.45rem;
+  }
+  .modal-old-price {
+    font-size: 0.95rem;
+  }
+  .modal-perks-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 4px 0 8px;
+  }
+  .perk-chip {
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    gap: 4px;
+  }
+  .perk-chip .material-icons {
+    font-size: 14px;
+  }
+  .modal-description-box {
+    margin-bottom: 8px;
+  }
+  .modal-desc-heading {
+    font-size: 0.76rem;
+    margin-bottom: 2px;
+  }
+  .modal-desc-text {
+    font-size: 0.8rem;
+    line-height: 1.35;
+    max-height: 42px;
+    overflow-y: auto;
+  }
+  .modal-qty-row {
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .modal-qty-label {
+    font-size: 0.78rem;
+  }
+  .modal-qty-btn {
+    width: 28px;
+    height: 26px;
+    font-size: 0.95rem;
+  }
+  .modal-qty-val {
+    min-width: 24px;
+    font-size: 0.85rem;
+  }
+  .modal-subtotal-text {
+    font-size: 0.8rem;
+  }
+  .modal-actions-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .btn-modal {
+    padding: 10px 8px;
+    font-size: 0.84rem;
+    gap: 4px;
+    border-radius: 8px;
+  }
+  .btn-modal .material-icons {
+    font-size: 16px;
+  }
+  .modal-footer-links {
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .modal-wa-btn {
+    padding: 7px 10px;
+    font-size: 0.8rem;
+  }
+  .modal-shop-more-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

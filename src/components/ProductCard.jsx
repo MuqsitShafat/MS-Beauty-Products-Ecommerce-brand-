@@ -1,13 +1,24 @@
 import React from 'react'
 
-export default function ProductCard({ p, onAddToCart, onBuyNow, isWishlisted, onToggleWishlist }) {
+export default function ProductCard({ p, onAddToCart, onBuyNow, isWishlisted, onToggleWishlist, onOpenProductModal }) {
   const off = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0
+
+  const handleCardClick = () => {
+    if (onOpenProductModal) {
+      onOpenProductModal(p)
+    }
+  }
 
   return (
     <article className="card" id={`product-${p.id}`}>
-      <div className="thumb">
+      <div
+        className="thumb"
+        onClick={handleCardClick}
+        style={{ cursor: 'pointer' }}
+        title={`Click to view ${p.name} details & gallery`}
+      >
         <img
-          src={`/images/products/${p.image}`}
+          src={p.image?.startsWith('data:') ? p.image : `/images/products/${p.image}`}
           alt={p.name}
           loading="lazy"
           width="400"
@@ -44,7 +55,14 @@ export default function ProductCard({ p, onAddToCart, onBuyNow, isWishlisted, on
 
       <div className="card-body">
         <span className="card-category">{p.category ? p.category.replace('-', ' ') : ''}</span>
-        <h3 className="card-title" title={p.name}>{p.name}</h3>
+        <h3
+          className="card-title"
+          title={`Click to view ${p.name}`}
+          onClick={handleCardClick}
+          style={{ cursor: 'pointer' }}
+        >
+          {p.name}
+        </h3>
         {p.description && <p className="card-desc">{p.description}</p>}
 
         <div className="price-row">
@@ -61,7 +79,10 @@ export default function ProductCard({ p, onAddToCart, onBuyNow, isWishlisted, on
             type="button"
             className="btn-card btn-add-cart"
             id={`btn-add-cart-${p.id}`}
-            onClick={() => onAddToCart(p)}
+            onClick={e => {
+              e.stopPropagation()
+              onAddToCart(p)
+            }}
           >
             <span className="material-icons">shopping_bag</span>
             <span>Add to Cart</span>
@@ -70,7 +91,10 @@ export default function ProductCard({ p, onAddToCart, onBuyNow, isWishlisted, on
             type="button"
             className="btn-card btn-buy-now"
             id={`btn-buy-now-${p.id}`}
-            onClick={() => onBuyNow(p)}
+            onClick={e => {
+              e.stopPropagation()
+              onBuyNow(p)
+            }}
           >
             <span className="material-icons">flash_on</span>
             <span>Buy Now</span>
